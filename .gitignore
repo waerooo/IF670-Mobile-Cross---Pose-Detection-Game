@@ -81,3 +81,11 @@ src/config/env.ts
 !.yarn/releases
 !.yarn/sdks
 !.yarn/versions
+
+
+# personal git ignore
+AGENTS.md
+App.js
+/assets
+LICENSE
+IF670_Mobile-Cross_Pose-Detection-Game.code-workspace
