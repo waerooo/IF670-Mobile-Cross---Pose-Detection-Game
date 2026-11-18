@@ -73,6 +73,7 @@ yarn-error.log
 
 # Secret config — JANGAN DI-PUSH!
 src/config/env.ts
+android/app/google-services.json
 
 # Personal task tracking — lokal saja
 TASKS.md
