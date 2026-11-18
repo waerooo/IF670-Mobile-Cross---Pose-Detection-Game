@@ -66,6 +66,14 @@ yarn-error.log
 # testing
 /coverage
 
+# Environment variables — JANGAN DI-PUSH!
+.env
+.env.local
+.env.*.local
+
+# Secret config — JANGAN DI-PUSH!
+src/config/env.ts
+
 # Yarn
 .yarn/*
 !.yarn/patches
