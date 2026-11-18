@@ -1,13 +1,13 @@
 import React from 'react';
 import { StatusBar } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
-import GameScreen from './src/screens/GameScreen';
+import AppNavigator from './src/navigation/AppNavigator';
 
 function App() {
   return (
     <SafeAreaProvider>
       <StatusBar barStyle="light-content" />
-      <GameScreen userId="abidzar-tester" />
+      <AppNavigator />
     </SafeAreaProvider>
   );
 }
