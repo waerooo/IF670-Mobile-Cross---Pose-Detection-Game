@@ -189,7 +189,6 @@ const GameScreen: React.FC<GameScreenProps> = ({ userId = 'anonymous' }) => {
     setIsSaving(true);
     try {
       await saveGameSession({
-        id: '',           // Firestore auto-id
         userId,
         score: scoreRef.current,
         poseCount: poseCountRef.current,
@@ -405,7 +404,11 @@ const styles = StyleSheet.create({
 
   // Countdown
   countdownOverlay: {
-    ...StyleSheet.absoluteFillObject,
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
     backgroundColor: 'rgba(0,0,0,0.6)',
     alignItems: 'center',
     justifyContent: 'center',
@@ -415,7 +418,11 @@ const styles = StyleSheet.create({
 
   // Idle
   idleOverlay: {
-    ...StyleSheet.absoluteFillObject,
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
     backgroundColor: 'rgba(0,0,0,0.65)',
     alignItems: 'center',
     justifyContent: 'center',

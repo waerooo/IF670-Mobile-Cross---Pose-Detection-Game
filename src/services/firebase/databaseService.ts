@@ -1,7 +1,23 @@
 /**
+ * Firebase Firestore database service for game sessions, user stats, and achievements.
  */
 
-import firestore from '@react-native-firebase/firestore';
+import {
+  getFirestore,
+  collection,
+  doc,
+  addDoc,
+  getDoc,
+  getDocs,
+  setDoc,
+  query,
+  where,
+  orderBy,
+  limit,
+  serverTimestamp,
+  runTransaction,
+} from '@react-native-firebase/firestore';
+import type { QueryDocumentSnapshot, Transaction } from '@react-native-firebase/firestore';
 import type { GameSession, UserStats, Achievement } from '../../types';
 
 // ── Collections ──────────────────────────────────────────────
@@ -10,25 +26,26 @@ const SESSIONS_COL = 'gameSessions';
 const USERS_COL = 'users';
 const ACHIEVEMENTS_COL = 'achievements';
 
+const db = getFirestore();
+
 // ── Game Session ─────────────────────────────────────────────
 
 /**
  * Save a completed game session to Firestore.
- * Called by GameScreen after game ends (A2 + A4 integration).
+ * Called by GameScreen after game ends.
  */
 export async function saveGameSession(session: Omit<GameSession, 'id'>): Promise<string> {
   try {
-    const ref = await firestore()
-      .collection(SESSIONS_COL)
-      .add({
-        ...session,
-        createdAt: firestore.FieldValue.serverTimestamp(),
-      });
+    const colRef = collection(db, SESSIONS_COL);
+    const docRef = await addDoc(colRef, {
+      ...session,
+      createdAt: serverTimestamp(),
+    });
 
     // Also update user aggregate stats
     await _incrementUserStats(session.userId, session);
 
-    return ref.id;
+    return docRef.id;
   } catch (err) {
     console.error('[DB] saveGameSession error:', err);
     throw err;
@@ -40,17 +57,22 @@ export async function saveGameSession(session: Omit<GameSession, 'id'>): Promise
  */
 export async function fetchRecentSessions(
   userId: string,
-  limit: number = 10,
+  limitCount: number = 10,
 ): Promise<GameSession[]> {
   try {
-    const snap = await firestore()
-      .collection(SESSIONS_COL)
-      .where('userId', '==', userId)
-      .orderBy('timestamp', 'desc')
-      .limit(limit)
-      .get();
+    const colRef = collection(db, SESSIONS_COL);
+    const q = query(
+      colRef,
+      where('userId', '==', userId),
+      orderBy('timestamp', 'desc'),
+      limit(limitCount),
+    );
+    const snap = await getDocs(q);
 
-    return snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as GameSession));
+    return snap.docs.map((d: QueryDocumentSnapshot) => ({
+      id: d.id,
+      ...(d.data() as object),
+    } as GameSession));
   } catch (err) {
     console.error('[DB] fetchRecentSessions error:', err);
     return [];
@@ -64,9 +86,12 @@ export async function fetchRecentSessions(
  */
 export async function fetchUserStats(userId: string): Promise<UserStats | null> {
   try {
-    const doc = await firestore().collection(USERS_COL).doc(userId).get();
-    if (!doc.exists) return null;
-    return (doc.data()?.stats ?? null) as UserStats | null;
+    const docRef = doc(db, USERS_COL, userId);
+    const d = await getDoc(docRef);
+    const exists = typeof d.exists === 'function' ? d.exists() : Boolean(d.exists);
+    if (!exists) return null;
+    const data = d.data() as { stats?: UserStats } | undefined;
+    return data?.stats ?? null;
   } catch (err) {
     console.error('[DB] fetchUserStats error:', err);
     return null;
@@ -78,13 +103,19 @@ async function _incrementUserStats(
   userId: string,
   session: Omit<GameSession, 'id'>,
 ): Promise<void> {
-  const ref = firestore().collection(USERS_COL).doc(userId);
+  const userDocRef = doc(db, USERS_COL, userId);
 
-  await firestore().runTransaction(async tx => {
-    const doc = await tx.get(ref);
-    const current: UserStats = doc.exists
-      ? (doc.data()?.stats as UserStats)
-      : { totalGames: 0, totalScore: 0, totalPoses: 0, bestScore: 0, averageAccuracy: 0 };
+  await runTransaction(db, async (tx: Transaction) => {
+    const d = await tx.get(userDocRef);
+    const exists = typeof d.exists === 'function' ? d.exists() : Boolean(d.exists);
+    const data = exists ? (d.data() as { stats?: UserStats }) : undefined;
+    const current: UserStats = data?.stats ?? {
+      totalGames: 0,
+      totalScore: 0,
+      totalPoses: 0,
+      bestScore: 0,
+      averageAccuracy: 0,
+    };
 
     const newTotal = current.totalGames + 1;
     const newScore = current.totalScore + session.score;
@@ -95,7 +126,7 @@ async function _incrementUserStats(
     );
 
     tx.set(
-      ref,
+      userDocRef,
       {
         stats: {
           totalGames: newTotal,
@@ -118,24 +149,27 @@ async function _incrementUserStats(
  */
 export async function fetchAchievements(userId: string): Promise<Achievement[]> {
   try {
+    const achColRef = collection(db, ACHIEVEMENTS_COL);
+    const q = query(achColRef, orderBy('requiredScore'));
+    const userAchColRef = collection(db, USERS_COL, userId, 'unlockedAchievements');
+
     const [masterSnap, userSnap] = await Promise.all([
-      firestore().collection(ACHIEVEMENTS_COL).orderBy('requiredScore').get(),
-      firestore()
-        .collection(USERS_COL)
-        .doc(userId)
-        .collection('unlockedAchievements')
-        .get(),
+      getDocs(q),
+      getDocs(userAchColRef),
     ]);
 
     const unlockedMap = new Map<string, number>();
-    userSnap.docs.forEach(doc => {
-      unlockedMap.set(doc.id, doc.data().unlockedAt as number);
+    userSnap.docs.forEach((d: QueryDocumentSnapshot) => {
+      const data = d.data() as { unlockedAt?: number };
+      if (data?.unlockedAt) {
+        unlockedMap.set(d.id, data.unlockedAt);
+      }
     });
 
-    return masterSnap.docs.map(doc => ({
-      id: doc.id,
-      ...(doc.data() as Omit<Achievement, 'id' | 'unlockedAt'>),
-      unlockedAt: unlockedMap.get(doc.id),
+    return masterSnap.docs.map((d: QueryDocumentSnapshot) => ({
+      id: d.id,
+      ...(d.data() as Omit<Achievement, 'id' | 'unlockedAt'>),
+      unlockedAt: unlockedMap.get(d.id),
     }));
   } catch (err) {
     console.error('[DB] fetchAchievements error:', err);
@@ -163,12 +197,8 @@ export async function checkAndUnlockAchievements(
 
       if (scoreOk && posesOk) {
         const unlockedAt = Date.now();
-        await firestore()
-          .collection(USERS_COL)
-          .doc(userId)
-          .collection('unlockedAchievements')
-          .doc(ach.id)
-          .set({ unlockedAt });
+        const achDocRef = doc(db, USERS_COL, userId, 'unlockedAchievements', ach.id);
+        await setDoc(achDocRef, { unlockedAt });
 
         newlyUnlocked.push({ ...ach, unlockedAt });
       }
