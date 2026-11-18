@@ -17,6 +17,10 @@ jest.mock('../src/services/firebase/authService', () => ({
   signInWithEmailAndPassword: jest.fn(),
 }));
 
+jest.mock('../src/services/firebase/databaseService', () => ({
+  fetchUserStats: jest.fn(),
+}));
+
 test('renders correctly', async () => {
   await ReactTestRenderer.act(() => {
     ReactTestRenderer.create(<App />);
