@@ -11,7 +11,7 @@ import com.google.mlkit.vision.common.InputImage
 import com.google.mlkit.vision.pose.Pose
 import com.google.mlkit.vision.pose.PoseDetection
 import com.google.mlkit.vision.pose.PoseDetector
-import com.google.mlkit.vision.pose.accurate.AccuratePoseDetectorOptions
+import com.google.mlkit.vision.pose.defaults.PoseDetectorOptions
 import org.json.JSONArray
 import org.json.JSONObject
 import java.io.File
@@ -23,8 +23,8 @@ class MLKitPoseDetectionModule(private val reactContext: ReactApplicationContext
 
     private fun getDetector(): PoseDetector {
         if (poseDetector == null) {
-            val options = AccuratePoseDetectorOptions.Builder()
-                .setDetectorMode(AccuratePoseDetectorOptions.SINGLE_IMAGE_MODE)
+            val options = PoseDetectorOptions.Builder()
+                .setDetectorMode(PoseDetectorOptions.STREAM_MODE)
                 .build()
             poseDetector = PoseDetection.getClient(options)
         }

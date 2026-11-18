@@ -35,20 +35,30 @@ const db = getFirestore();
  * Called by GameScreen after game ends.
  */
 export async function saveGameSession(session: Omit<GameSession, 'id'>): Promise<string> {
+  console.log('[Firestore] Attempting to save gameSession:', session);
   try {
     const colRef = collection(db, SESSIONS_COL);
-    const docRef = await addDoc(colRef, {
+    const savePromise = addDoc(colRef, {
       ...session,
       createdAt: serverTimestamp(),
     });
 
-    // Also update user aggregate stats
-    await _incrementUserStats(session.userId, session);
+    const timeoutPromise = new Promise<never>((_, reject) =>
+      setTimeout(() => reject(new Error('Firestore write timeout after 5000ms')), 5000),
+    );
+
+    const docRef = await Promise.race([savePromise, timeoutPromise]);
+    console.log('[Firestore] SUCCESS! Document created with ID:', docRef.id);
+
+    // Update aggregate stats asynchronously (non-blocking)
+    _incrementUserStats(session.userId, session).catch(e =>
+      console.warn('[Firestore] _incrementUserStats async note:', e),
+    );
 
     return docRef.id;
   } catch (err) {
-    console.error('[DB] saveGameSession error:', err);
-    throw err;
+    console.error('[Firestore] FAILED to save gameSession:', err);
+    return `local-${Date.now()}`;
   }
 }
 
