@@ -74,6 +74,9 @@ yarn-error.log
 # Secret config — JANGAN DI-PUSH!
 src/config/env.ts
 
+# Personal task tracking — lokal saja
+TASKS.md
+
 # Yarn
 .yarn/*
 !.yarn/patches
