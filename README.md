@@ -1,1 +1,1 @@
-# IF670-Mobile-Cross---Pose-Detection-Game
+# IF670_Mobile-Cross_Snapfit
