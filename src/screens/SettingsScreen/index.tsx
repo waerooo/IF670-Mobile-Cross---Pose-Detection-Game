@@ -123,7 +123,7 @@ const SettingsScreen: React.FC<RootScreenProps<'Settings'>> = ({
             />
             <Button
               title="Cancel"
-              variant="secondary"
+              variant="outline"
               onPress={() => setConfirmDelete(false)}
             />
           </View>

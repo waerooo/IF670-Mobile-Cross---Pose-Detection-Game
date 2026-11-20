@@ -5,6 +5,11 @@ import GetReadyOverlay from '../../../src/components/game/GetReadyOverlay';
 import {GAME_DURATION_SECONDS} from '../../../src/constants';
 import {MOCK_HUD} from '../../../src/constants/mockData';
 
+// GetReadyOverlay membaca safe area, yang butuh provider asli di aplikasi.
+jest.mock('react-native-safe-area-context', () =>
+  require('react-native-safe-area-context/jest/mock').default,
+);
+
 type Renderer = ReactTestRenderer.ReactTestRenderer;
 
 const render = async (element: React.ReactElement) => {

@@ -10,7 +10,9 @@ import {
 } from 'react-native';
 import {PALETTE, RADIUS, SIZES, SPACING, TYPOGRAPHY} from '../../constants';
 
-type ButtonVariant = 'primary' | 'secondary' | 'destructive';
+// 'outline' dipakai bila tombol berada di atas kartu terang (dialog), karena
+// warna 'secondary' sama dengan warna kartu dan akan menyatu dengan latarnya.
+type ButtonVariant = 'primary' | 'secondary' | 'outline' | 'destructive';
 
 interface ButtonProps {
   title: string;
@@ -35,6 +37,12 @@ const VARIANTS: Record<
     face: PALETTE.panel,
     rim: PALETTE.secondaryShadow,
     label: PALETTE.ink,
+  },
+  outline: {
+    face: PALETTE.panelLight,
+    rim: 'transparent',
+    label: PALETTE.ink,
+    border: PALETTE.primary,
   },
   destructive: {
     face: PALETTE.white,

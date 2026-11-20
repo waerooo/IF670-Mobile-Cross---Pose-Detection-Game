@@ -50,7 +50,7 @@ const PauseDialog: React.FC<PauseDialogProps> = ({
         </View>
 
         <Button title="▶  Resume" onPress={onResume} />
-        <Button title="↺  Restart" variant="secondary" onPress={onRestart} />
+        <Button title="↺  Restart" variant="outline" onPress={onRestart} />
         <Button title="Quit to Home" variant="destructive" onPress={onQuit} />
 
         <Text style={styles.note}>Quitting won't count this session.</Text>

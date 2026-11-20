@@ -1,5 +1,6 @@
 import React from 'react';
 import {StyleSheet, Text, View} from 'react-native';
+import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import {
   GAME_DURATION_SECONDS,
   PALETTE,
@@ -23,44 +24,60 @@ const GetReadyOverlay: React.FC<GetReadyOverlayProps> = ({
   count,
   bodyDetected = true,
   durationSeconds = GAME_DURATION_SECONDS,
-}) => (
-  <View style={[StyleSheet.absoluteFill, styles.overlay]}>
+}) => {
+  // Lapisan menutupi seluruh layar, jadi beri jarak dari status bar dan
+  // garis navigasi supaya badge dan kartu tidak menempel ke tepi sistem.
+  const insets = useSafeAreaInsets();
+
+  return (
     <View
-      style={[styles.badge, bodyDetected ? styles.badgeOk : styles.badgeWarn]}>
-      <Text
+      style={[
+        StyleSheet.absoluteFill,
+        styles.overlay,
+        {
+          paddingTop: insets.top + SPACING.md,
+          paddingBottom: insets.bottom + SPACING.md,
+        },
+      ]}>
+      <View
         style={[
-          styles.badgeText,
-          {color: bodyDetected ? PALETTE.success : PALETTE.reward},
+          styles.badge,
+          bodyDetected ? styles.badgeOk : styles.badgeWarn,
         ]}>
-        {bodyDetected
-          ? '✔ Full body detected'
-          : 'Step back so your full body is visible'}
-      </Text>
-    </View>
+        <Text
+          style={[
+            styles.badgeText,
+            {color: bodyDetected ? PALETTE.success : PALETTE.reward},
+          ]}>
+          {bodyDetected
+            ? '✔ Full body detected'
+            : 'Step back so your full body is visible'}
+        </Text>
+      </View>
 
-    <View style={styles.center}>
-      <Text style={styles.heading}>Get Ready!</Text>
-      <Text accessibilityLiveRegion="polite" style={styles.count}>
-        {`${count}`}
-      </Text>
-    </View>
+      <View style={styles.center}>
+        <Text style={styles.heading}>Get Ready!</Text>
+        <Text accessibilityLiveRegion="polite" style={styles.count}>
+          {`${count}`}
+        </Text>
+      </View>
 
-    <View style={styles.howTo}>
-      <Text style={styles.howToTitle}>How to play</Text>
-      <Text style={styles.howToText}>
-        {`Copy the pose shown in the card. Hold until the ring is full → +1 pose! Get as many as you can in ${durationSeconds} seconds.`}
-      </Text>
+      <View style={styles.howTo}>
+        <Text style={styles.howToTitle}>How to play</Text>
+        <Text style={styles.howToText}>
+          {`Copy the pose shown in the card. Hold until the ring is full → +1 pose! Get as many as you can in ${durationSeconds} seconds.`}
+        </Text>
+      </View>
     </View>
-  </View>
-);
+  );
+};
 
 const styles = StyleSheet.create({
   overlay: {
     backgroundColor: 'rgba(9, 0, 63, 0.55)',
     justifyContent: 'space-between',
     alignItems: 'center',
-    padding: SPACING.screenMargin,
-    paddingTop: SPACING.xl,
+    paddingHorizontal: SPACING.screenMargin,
   },
   badge: {
     borderWidth: 2,
