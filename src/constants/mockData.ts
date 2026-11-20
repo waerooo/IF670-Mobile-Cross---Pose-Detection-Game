@@ -103,3 +103,23 @@ export const MOCK_ACHIEVEMENTS: AchievementItem[] = [
     target: 100,
   },
 ];
+
+// ── Hasil game (ResultCard) dan jeda (PauseDialog) ───────────
+
+export const MOCK_RESULT = {
+  poseCount: 19,
+  posePerMinute: 12.67,
+  streakFrom: 11,
+  streakTo: 12,
+  newAchievement: {
+    emoji: '🏆',
+    title: 'Adept Athlete',
+    description: 'At least 10 pose/minute',
+  },
+};
+
+export const MOCK_PAUSE = {poseCount: 5, secondsLeft: 112};
+
+// ── HUD saat bermain (GameHud) ───────────────────────────────
+
+export const MOCK_HUD = {poseCount: 5, secondsLeft: 62};
