@@ -1,224 +1,148 @@
 import React from 'react';
-import {Pressable, StyleSheet, Text, View} from 'react-native';
-import {SafeAreaView} from 'react-native-safe-area-context';
-import Button from '../../components/common/Button';
 import {
-  FONTS,
-  PALETTE,
-  RADIUS,
-  SIZES,
-  SPACING,
-  TYPOGRAPHY,
-} from '../../constants';
-import {DayStatus, MOCK_HOME} from '../../constants/mockData';
-import type {RootScreenProps} from '../../navigation/types';
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+} from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { COLORS, SNAP_FIT_APP_NAME } from '../../constants';
 
-// ── Bagian kecil khusus layar ini ────────────────────────────
+interface HomeScreenProps {
+  email: string;
+  onOpenProfile: () => void;
+  onStartGame: () => void;
+}
 
-const DayCircle: React.FC<{day: string; status: DayStatus}> = ({
-  day,
-  status,
-}) => (
-  <View style={styles.dayItem}>
-    <View
-      style={[
-        styles.dayCircle,
-        status === 'done' && styles.dayDone,
-        status === 'today' && styles.dayToday,
-      ]}>
-      {status === 'done' && <Text style={styles.dayCheck}>✓</Text>}
-    </View>
-    <Text style={styles.dayLabel}>{day}</Text>
-  </View>
-);
-
-const IconButton: React.FC<{
-  icon: string;
-  label: string;
-  onPress: () => void;
-}> = ({icon, label, onPress}) => (
-  <Pressable
-    accessibilityRole="button"
-    accessibilityLabel={label}
-    onPress={onPress}
-    style={({pressed}) => [styles.iconButton, pressed && styles.iconPressed]}>
-    <Text style={styles.iconText}>{icon}</Text>
-  </Pressable>
-);
-
-// ── Layar ────────────────────────────────────────────────────
-
-const HomeScreen: React.FC<RootScreenProps<'Home'>> = ({navigation}) => {
-  const {displayName, streak, week} = MOCK_HOME;
-  const initials = displayName
-    .split(' ')
-    .map(word => word[0])
-    .join('')
-    .slice(0, 2)
-    .toUpperCase();
-  // Status 'today' = hari ini belum main. Setelah main berubah jadi 'done'.
-  const isTodayPending = week.some(item => item.status === 'today');
+function HomeScreen({ email, onOpenProfile, onStartGame }: HomeScreenProps) {
+  const displayName = email.split('@')[0] || 'SnapFit';
+  const avatarLetter = displayName.charAt(0).toUpperCase();
 
   return (
-    <SafeAreaView style={styles.container}>
-      {/* Profil */}
-      <View style={styles.header}>
-        <View style={styles.avatar}>
-          <Text style={styles.avatarText}>{initials}</Text>
+    <SafeAreaView style={styles.safeArea}>
+      <ScrollView contentContainerStyle={styles.content}>
+        <View style={styles.header}>
+          <View style={styles.brandMark}>
+            <Text style={styles.brandMarkText}>S</Text>
+          </View>
+          <Text style={styles.appName}>{SNAP_FIT_APP_NAME}</Text>
         </View>
-        <View>
-          <Text style={styles.name}>{displayName}</Text>
-          <Text style={styles.subtitle}>Ready to move today?</Text>
-        </View>
-      </View>
 
-      {/* Streak */}
-      <View style={styles.streakBlock}>
-        <Text style={styles.streakTitle}>Daily Streak</Text>
-        <View style={styles.streakRow}>
-          <Text style={styles.flame}>🔥</Text>
-          <Text style={styles.streakNumber}>{streak.current}</Text>
-        </View>
-        <Text style={styles.streakCaption}>
-          days in a row · best: {streak.best}
-        </Text>
-      </View>
+        <Text style={styles.greeting}>Halo, {displayName}!</Text>
+        <Text style={styles.subtitle}>Siap bergerak hari ini?</Text>
 
-      {/* Minggu ini */}
-      <View style={styles.weekCard}>
-        <View style={styles.weekHeader}>
-          <Text style={styles.weekTitle}>This week</Text>
-          {isTodayPending && (
-            <Text style={styles.weekToday}>Today: not yet played</Text>
-          )}
-        </View>
-        <View style={styles.weekRow}>
-          {week.map(item => (
-            <DayCircle key={item.day} day={item.day} status={item.status} />
-          ))}
-        </View>
-      </View>
+        <Pressable
+          accessibilityRole="button"
+          onPress={onStartGame}
+          style={({ pressed }) => [styles.gameCard, pressed && styles.pressed]}
+          testID="menu-play">
+          <Text style={styles.gameEmoji}>💪</Text>
+          <Text style={styles.gameTitle}>Mulai Gameplay</Text>
+          <Text style={styles.gameDescription}>
+            Ikuti tantangan pose dan kumpulkan skor.
+          </Text>
+          <View style={styles.playButton}>
+            <Text style={styles.playButtonText}>Mulai Bermain</Text>
+          </View>
+        </Pressable>
 
-      {/* Aksi */}
-      <View style={styles.actions}>
-        <IconButton
-          icon="🏆"
-          label="Achievements"
-          onPress={() => navigation.navigate('Achievements')}
-        />
-        <Button
-          title="▶  Play"
-          onPress={() => navigation.navigate('Game')}
-          style={styles.playButton}
-        />
-        <IconButton
-          icon="⚙️"
-          label="Settings"
-          onPress={() => navigation.navigate('Settings')}
-        />
-      </View>
+        <Pressable
+          accessibilityRole="button"
+          onPress={onOpenProfile}
+          style={({ pressed }) => [styles.profileCard, pressed && styles.pressed]}
+          testID="menu-profile">
+          <View style={styles.avatar}>
+            <Text style={styles.avatarText}>{avatarLetter}</Text>
+          </View>
+          <View style={styles.profileCopy}>
+            <Text style={styles.profileTitle}>Profil & Statistik</Text>
+            <Text style={styles.profileDescription}>
+              Lihat progres dan catatan permainan kamu.
+            </Text>
+          </View>
+          <Text style={styles.chevron}>›</Text>
+        </Pressable>
+      </ScrollView>
     </SafeAreaView>
   );
-};
+}
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: PALETTE.background,
-    paddingHorizontal: SPACING.screenMargin,
+  safeArea: { flex: 1, backgroundColor: COLORS.background },
+  content: {
+    flexGrow: 1,
+    paddingHorizontal: 24,
+    paddingTop: 20,
+    paddingBottom: 36,
   },
-
-  // Profil
-  header: {
+  header: { flexDirection: 'row', alignItems: 'center', marginBottom: 40 },
+  brandMark: {
+    width: 38,
+    height: 38,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: COLORS.primary,
+    marginRight: 10,
+  },
+  brandMarkText: { color: COLORS.text, fontSize: 22, fontWeight: '800' },
+  appName: { color: COLORS.text, fontSize: 20, fontWeight: '700' },
+  greeting: { color: COLORS.text, fontSize: 28, fontWeight: '800' },
+  subtitle: { color: COLORS.textSecondary, fontSize: 16, marginTop: 6, marginBottom: 28 },
+  gameCard: {
+    backgroundColor: COLORS.surface,
+    borderRadius: 24,
+    borderWidth: 1,
+    borderColor: '#343449',
+    padding: 24,
+    marginBottom: 16,
+  },
+  gameEmoji: { fontSize: 36, marginBottom: 14 },
+  gameTitle: { color: COLORS.text, fontSize: 22, fontWeight: '700' },
+  gameDescription: {
+    color: COLORS.textSecondary,
+    fontSize: 14,
+    lineHeight: 21,
+    marginTop: 8,
+  },
+  playButton: {
+    minHeight: 50,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: COLORS.primary,
+    borderRadius: 14,
+    marginTop: 22,
+  },
+  playButtonText: { color: COLORS.text, fontSize: 16, fontWeight: '700' },
+  profileCard: {
+    minHeight: 90,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: SPACING.sm + 4,
-    paddingTop: SPACING.md,
+    backgroundColor: COLORS.surface,
+    borderRadius: 20,
+    padding: 16,
   },
   avatar: {
-    width: 40,
-    height: 40,
-    borderRadius: RADIUS.pill,
-    backgroundColor: PALETTE.backgroundElevated,
+    width: 48,
+    height: 48,
+    borderRadius: 24,
     alignItems: 'center',
     justifyContent: 'center',
+    backgroundColor: '#343449',
+    marginRight: 14,
   },
-  avatarText: {...TYPOGRAPHY.labelMd, color: PALETTE.panel},
-  name: {...TYPOGRAPHY.labelLg, color: PALETTE.white},
-  subtitle: {...TYPOGRAPHY.caption, color: PALETTE.panel},
-
-  // Streak
-  streakBlock: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
+  avatarText: { color: COLORS.text, fontSize: 20, fontWeight: '700' },
+  profileCopy: { flex: 1 },
+  profileTitle: { color: COLORS.text, fontSize: 16, fontWeight: '700' },
+  profileDescription: {
+    color: COLORS.textSecondary,
+    fontSize: 12,
+    lineHeight: 17,
+    marginTop: 4,
   },
-  streakTitle: {
-    fontFamily: FONTS.displayItalic,
-    fontSize: 26,
-    lineHeight: 32,
-    color: PALETTE.panel,
-  },
-  streakRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: SPACING.sm,
-  },
-  flame: {fontSize: 56},
-  streakNumber: {
-    ...TYPOGRAPHY.counterGiant,
-    color: PALETTE.white,
-  },
-  streakCaption: {...TYPOGRAPHY.caption, color: PALETTE.panel},
-
-  // Minggu ini
-  weekCard: {
-    backgroundColor: PALETTE.backgroundElevated,
-    borderRadius: RADIUS.card,
-    padding: SPACING.md,
-    gap: SPACING.md,
-    marginBottom: SPACING.lg,
-  },
-  weekHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  weekTitle: {...TYPOGRAPHY.labelMd, color: PALETTE.white},
-  weekToday: {...TYPOGRAPHY.caption, color: PALETTE.reward},
-  weekRow: {flexDirection: 'row', justifyContent: 'space-between'},
-  dayItem: {alignItems: 'center', gap: SPACING.xs},
-  dayCircle: {
-    width: 32,
-    height: 32,
-    borderRadius: RADIUS.pill,
-    backgroundColor: PALETTE.background,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  dayDone: {backgroundColor: PALETTE.success},
-  dayToday: {borderWidth: 2, borderColor: PALETTE.white},
-  dayCheck: {color: PALETTE.background, fontWeight: 'bold'},
-  dayLabel: {...TYPOGRAPHY.caption, color: PALETTE.panel},
-
-  // Aksi
-  actions: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: SPACING.sm + 4,
-    paddingBottom: SPACING.lg,
-  },
-  playButton: {flex: 1},
-  iconButton: {
-    width: SIZES.buttonHeight,
-    height: SIZES.buttonHeight,
-    borderRadius: RADIUS.button,
-    backgroundColor: PALETTE.backgroundElevated,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  iconPressed: {opacity: 0.7},
-  iconText: {fontSize: 22},
+  chevron: { color: COLORS.textSecondary, fontSize: 28, marginLeft: 8 },
+  pressed: { opacity: 0.82 },
 });
 
 export default HomeScreen;

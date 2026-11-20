@@ -51,9 +51,13 @@ function getRandomChallenge(): GameChallenge {
 
 interface GameScreenProps {
   userId?: string; // passed from navigation / auth context
+  onBackToMenu?: () => void;
 }
 
-const GameScreen: React.FC<GameScreenProps> = ({ userId = 'anonymous' }) => {
+const GameScreen: React.FC<GameScreenProps> = ({
+  userId = 'anonymous',
+  onBackToMenu,
+}) => {
   // Camera
   const { isGranted, isLoading: permLoading, requestPermission } = useCameraPermission();
   const device = useCameraDevice('front');
@@ -221,6 +225,11 @@ const GameScreen: React.FC<GameScreenProps> = ({ userId = 'anonymous' }) => {
       <View style={styles.centeredContainer}>
         <ActivityIndicator size="large" color={COLORS.primary} />
         <Text style={styles.infoText}>Memeriksa izin kamera...</Text>
+        {onBackToMenu && (
+          <TouchableOpacity style={styles.primaryButton} onPress={onBackToMenu}>
+            <Text style={styles.primaryButtonText}>Kembali ke Menu</Text>
+          </TouchableOpacity>
+        )}
       </View>
     );
   }
@@ -236,6 +245,11 @@ const GameScreen: React.FC<GameScreenProps> = ({ userId = 'anonymous' }) => {
         <TouchableOpacity style={styles.primaryButton} onPress={requestPermission}>
           <Text style={styles.primaryButtonText}>Izinkan Kamera</Text>
         </TouchableOpacity>
+        {onBackToMenu && (
+          <TouchableOpacity style={styles.secondaryButton} onPress={onBackToMenu}>
+            <Text style={styles.secondaryButtonText}>Kembali ke Menu</Text>
+          </TouchableOpacity>
+        )}
       </View>
     );
   }
@@ -245,6 +259,11 @@ const GameScreen: React.FC<GameScreenProps> = ({ userId = 'anonymous' }) => {
       <View style={styles.centeredContainer}>
         <Text style={styles.icon}>❌</Text>
         <Text style={styles.infoText}>Kamera tidak tersedia di perangkat ini.</Text>
+        {onBackToMenu && (
+          <TouchableOpacity style={styles.primaryButton} onPress={onBackToMenu}>
+            <Text style={styles.primaryButtonText}>Kembali ke Menu</Text>
+          </TouchableOpacity>
+        )}
       </View>
     );
   }
@@ -314,6 +333,11 @@ const GameScreen: React.FC<GameScreenProps> = ({ userId = 'anonymous' }) => {
           <TouchableOpacity style={styles.primaryButton} onPress={startCountdown}>
             <Text style={styles.primaryButtonText}>Mulai Game</Text>
           </TouchableOpacity>
+          {onBackToMenu && (
+            <TouchableOpacity style={styles.secondaryButton} onPress={onBackToMenu}>
+              <Text style={styles.secondaryButtonText}>Kembali ke Menu</Text>
+            </TouchableOpacity>
+          )}
         </View>
       )}
 
@@ -347,6 +371,11 @@ const GameScreen: React.FC<GameScreenProps> = ({ userId = 'anonymous' }) => {
             <TouchableOpacity style={styles.primaryButton} onPress={restartGame}>
               <Text style={styles.primaryButtonText}>Main Lagi</Text>
             </TouchableOpacity>
+            {onBackToMenu && (
+              <TouchableOpacity style={styles.secondaryButton} onPress={onBackToMenu}>
+                <Text style={styles.secondaryButtonText}>Kembali ke Menu</Text>
+              </TouchableOpacity>
+            )}
           </View>
         </View>
       </Modal>
@@ -453,6 +482,15 @@ const styles = StyleSheet.create({
     marginTop: 8,
   },
   primaryButtonText: { color: '#FFF', fontSize: 18, fontWeight: 'bold' },
+  secondaryButton: {
+    borderWidth: 1,
+    borderColor: COLORS.primary,
+    paddingHorizontal: 32,
+    paddingVertical: 12,
+    borderRadius: 30,
+    marginTop: 4,
+  },
+  secondaryButtonText: { color: COLORS.text, fontSize: 16, fontWeight: '600' },
 
   // Summary Modal
   modalOverlay: {
