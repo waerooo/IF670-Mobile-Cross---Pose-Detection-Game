@@ -7,6 +7,10 @@ jest.mock('../../../src/services/firebase/databaseService', () => ({
   fetchUserStats: jest.fn(),
 }));
 
+jest.mock('../../../src/services/firebase/authService', () => ({
+  signOut: jest.fn(),
+}));
+
 const loadStats = jest.mocked(fetchUserStats);
 
 describe('ProfileScreen', () => {

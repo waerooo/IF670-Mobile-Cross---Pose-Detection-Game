@@ -65,6 +65,7 @@ export function validatePose(pose: DetectedPose): PoseValidationResult {
   const classifiers: Array<() => PoseValidationResult | null> = [
     () => classifyTPose(pose),
     () => classifyHandsUp(pose),
+    () => classifyOneHandUp(pose),
     () => classifySquat(pose),
     () => classifyLunge(pose),
     () => classifyJumpingJack(pose),
@@ -132,6 +133,32 @@ function classifyHandsUp(pose: DetectedPose): PoseValidationResult | null {
   if (lAbove && rAbove) {
     const confidence = (lWrist.likelihood + rWrist.likelihood) / 2;
     return { isValid: true, label: 'HANDS_UP', confidence };
+  }
+  return null;
+}
+
+// ── One Hand Up (Right / Left) ───────────────────────────────
+
+/**
+ * One Hand Up: one wrist above head, other hand below shoulder.
+ */
+function classifyOneHandUp(pose: DetectedPose): PoseValidationResult | null {
+  const nose = lm(pose, PoseLandmarkType.NOSE);
+  const lWrist = lm(pose, PoseLandmarkType.LEFT_WRIST);
+  const rWrist = lm(pose, PoseLandmarkType.RIGHT_WRIST);
+  const lShoulder = lm(pose, PoseLandmarkType.LEFT_SHOULDER);
+  const rShoulder = lm(pose, PoseLandmarkType.RIGHT_SHOULDER);
+
+  if (!nose || !lWrist || !rWrist || !lShoulder || !rShoulder) return null;
+
+  const leftUp = lWrist.y < nose.y && rWrist.y > rShoulder.y;
+  const rightUp = rWrist.y < nose.y && lWrist.y > lShoulder.y;
+
+  if (rightUp && !leftUp) {
+    return { isValid: true, label: 'HAND_RIGHT_UP', confidence: rWrist.likelihood };
+  }
+  if (leftUp && !rightUp) {
+    return { isValid: true, label: 'HAND_LEFT_UP', confidence: lWrist.likelihood };
   }
   return null;
 }
@@ -238,6 +265,8 @@ export function calculatePoseScore(result: PoseValidationResult): number {
   const basePoints: Record<PoseLabel, number> = {
     T_POSE: 10,
     HANDS_UP: 8,
+    HAND_RIGHT_UP: 8,
+    HAND_LEFT_UP: 8,
     SQUAT: 12,
     LUNGE_LEFT: 10,
     LUNGE_RIGHT: 10,

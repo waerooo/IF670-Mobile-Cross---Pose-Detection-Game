@@ -56,6 +56,8 @@ export interface DetectedPose {
 export type PoseLabel =
   | 'T_POSE'
   | 'HANDS_UP'
+  | 'HAND_RIGHT_UP'
+  | 'HAND_LEFT_UP'
   | 'SQUAT'
   | 'LUNGE_LEFT'
   | 'LUNGE_RIGHT'

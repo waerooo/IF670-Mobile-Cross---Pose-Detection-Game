@@ -16,6 +16,7 @@ import { signInWithEmailAndPassword } from '../../services/firebase/authService'
 
 interface LoginScreenProps {
   onPressRegister: () => void;
+  onPressGuest?: () => void;
 }
 
 function getSignInErrorMessage(error: unknown): string {
@@ -44,7 +45,7 @@ function getSignInErrorMessage(error: unknown): string {
   }
 }
 
-function LoginScreen({ onPressRegister }: LoginScreenProps) {
+function LoginScreen({ onPressRegister, onPressGuest }: LoginScreenProps) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isPasswordVisible, setIsPasswordVisible] = useState(false);
@@ -178,6 +179,19 @@ function LoginScreen({ onPressRegister }: LoginScreenProps) {
                 Belum punya akun? <Text style={styles.registerTextEmphasis}>Daftar</Text>
               </Text>
             </Pressable>
+
+            {onPressGuest && (
+              <Pressable
+                accessibilityRole="button"
+                disabled={isSubmitting}
+                onPress={onPressGuest}
+                style={styles.guestLink}
+                testID="login-guest">
+                <Text style={styles.guestText}>
+                  Atau coba game <Text style={styles.guestTextEmphasis}>Sebagai Tamu (Guest) →</Text>
+                </Text>
+              </Pressable>
+            )}
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
@@ -267,6 +281,9 @@ const styles = StyleSheet.create({
   registerLink: { alignItems: 'center', paddingTop: 20 },
   registerText: { color: COLORS.textSecondary, fontSize: 14 },
   registerTextEmphasis: { color: COLORS.primary, fontWeight: '700' },
+  guestLink: { alignItems: 'center', paddingTop: 16, paddingBottom: 4 },
+  guestText: { color: COLORS.textSecondary, fontSize: 13 },
+  guestTextEmphasis: { color: '#00E5FF', fontWeight: '700' },
 });
 
 export default LoginScreen;
