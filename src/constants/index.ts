@@ -12,3 +12,6 @@ export const COLORS = {
 export const GAME_DURATION_SECONDS = 60;
 
 export const SNAP_FIT_APP_NAME = 'SnapFit';
+
+// Design tokens dari Figma (PALETTE, FONTS, TYPOGRAPHY, SPACING, RADIUS, SIZES)
+export * from './theme';

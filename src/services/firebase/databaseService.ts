@@ -92,7 +92,7 @@ export async function fetchRecentSessions(
 // ── User Stats ───────────────────────────────────────────────
 
 /**
- * Fetch aggregate stats for the Settings screen.
+ * Fetch aggregate stats for the signed-in user's profile.
  */
 export async function fetchUserStats(userId: string): Promise<UserStats | null> {
   try {
@@ -104,7 +104,7 @@ export async function fetchUserStats(userId: string): Promise<UserStats | null> 
     return data?.stats ?? null;
   } catch (err) {
     console.error('[DB] fetchUserStats error:', err);
-    return null;
+    throw err;
   }
 }
 
