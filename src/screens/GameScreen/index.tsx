@@ -502,6 +502,11 @@ const GameScreen: React.FC<GameScreenProps> = ({
       {gameStatus === 'IDLE' && (
         <View style={styles.idleOverlay}>
           <Text style={styles.appTitle}>SnapFit 💪</Text>
+          <View style={styles.userBadge}>
+            <Text style={styles.userBadgeText}>
+              👤 Akun: {userId === 'guest-player' ? 'Tamu (Guest)' : userId.length > 16 ? `${userId.slice(0, 12)}...` : userId}
+            </Text>
+          </View>
           <Text style={styles.infoText}>
             Posisikan kamera agar seluruh tubuh terlihat dari kepala hingga kaki.
           </Text>
@@ -581,6 +586,19 @@ const styles = StyleSheet.create({
   icon: { fontSize: 56 },
   titleText: { color: COLORS.text, fontSize: 22, fontWeight: 'bold', textAlign: 'center' },
   appTitle: { color: COLORS.primary, fontSize: 36, fontWeight: 'bold', textAlign: 'center' },
+  userBadge: {
+    backgroundColor: 'rgba(255,255,255,0.12)',
+    paddingHorizontal: 14,
+    paddingVertical: 6,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.2)',
+  },
+  userBadgeText: {
+    color: '#00E5FF',
+    fontSize: 13,
+    fontWeight: '600',
+  },
   infoText: { color: COLORS.textSecondary, fontSize: 15, textAlign: 'center', paddingHorizontal: 16 },
   subInfoText: { color: '#AAA', fontSize: 13, textAlign: 'center', marginTop: -6 },
 

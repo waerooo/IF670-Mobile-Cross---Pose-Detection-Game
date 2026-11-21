@@ -15,6 +15,7 @@ jest.mock('../src/services/firebase/authService', () => ({
     return () => {};
   },
   signInWithEmailAndPassword: jest.fn(),
+  signOut: jest.fn(),
 }));
 
 jest.mock('../src/services/firebase/databaseService', () => ({

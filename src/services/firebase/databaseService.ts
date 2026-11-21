@@ -145,6 +145,7 @@ async function _incrementUserStats(
           bestScore: newBest,
           averageAccuracy: newAvgAcc,
         },
+        lastPlayedAt: session.timestamp,
       },
       { merge: true },
     );

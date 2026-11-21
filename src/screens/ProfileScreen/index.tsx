@@ -9,6 +9,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { COLORS } from '../../constants';
+import { signOut } from '../../services/firebase/authService';
 import { fetchUserStats } from '../../services/firebase/databaseService';
 import type { UserStats } from '../../types';
 
@@ -16,6 +17,7 @@ interface ProfileScreenProps {
   userId: string;
   email: string;
   onBack: () => void;
+  onSignOut?: () => void;
 }
 
 const EMPTY_STATS: UserStats = {
@@ -26,11 +28,28 @@ const EMPTY_STATS: UserStats = {
   averageAccuracy: 0,
 };
 
-function ProfileScreen({ userId, email, onBack }: ProfileScreenProps) {
+function ProfileScreen({ userId, email, onBack, onSignOut }: ProfileScreenProps) {
   const [stats, setStats] = useState<UserStats | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [hasError, setHasError] = useState(false);
   const [reloadCount, setReloadCount] = useState(0);
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
+
+  const handleLogout = async () => {
+    setIsLoggingOut(true);
+    try {
+      await signOut();
+    } catch (e) {
+      console.warn('[ProfileScreen] SignOut error (proceeding to reset local state):', e);
+    } finally {
+      setIsLoggingOut(false);
+      if (onSignOut) {
+        onSignOut();
+      } else {
+        onBack();
+      }
+    }
+  };
 
   useEffect(() => {
     let isCurrent = true;
@@ -122,6 +141,19 @@ function ProfileScreen({ userId, email, onBack }: ProfileScreenProps) {
             ))}
           </View>
         )}
+
+        <Pressable
+          accessibilityRole="button"
+          onPress={handleLogout}
+          disabled={isLoggingOut}
+          style={({ pressed }) => [styles.logoutButton, pressed && styles.logoutButtonPressed]}
+          testID="profile-logout">
+          {isLoggingOut ? (
+            <ActivityIndicator size="small" color="#FF5252" />
+          ) : (
+            <Text style={styles.logoutButtonText}>🚪 Keluar dari Akun</Text>
+          )}
+        </Pressable>
       </ScrollView>
     </SafeAreaView>
   );
@@ -176,6 +208,25 @@ const styles = StyleSheet.create({
   },
   statValue: { color: COLORS.text, fontSize: 26, fontWeight: '800' },
   statLabel: { color: COLORS.textSecondary, fontSize: 13, marginTop: 8 },
+  logoutButton: {
+    marginTop: 32,
+    borderWidth: 1.5,
+    borderColor: '#FF5252',
+    borderRadius: 16,
+    paddingVertical: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(255, 82, 82, 0.08)',
+  },
+  logoutButtonPressed: {
+    opacity: 0.7,
+    backgroundColor: 'rgba(255, 82, 82, 0.16)',
+  },
+  logoutButtonText: {
+    color: '#FF5252',
+    fontSize: 16,
+    fontWeight: '700',
+  },
 });
 
 export default ProfileScreen;

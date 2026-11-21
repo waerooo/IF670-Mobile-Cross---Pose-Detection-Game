@@ -3,6 +3,7 @@ import {
   getAuth,
   onAuthStateChanged,
   signInWithEmailAndPassword as firebaseSignInWithEmailAndPassword,
+  signOut as firebaseSignOut,
 } from '@react-native-firebase/auth';
 import type { User } from '@react-native-firebase/auth';
 
@@ -20,4 +21,8 @@ export function signInWithEmailAndPassword(email: string, password: string) {
 
 export function createUserWithEmailAndPassword(email: string, password: string) {
   return firebaseCreateUserWithEmailAndPassword(auth, email, password);
+}
+
+export function signOut() {
+  return firebaseSignOut(auth);
 }
