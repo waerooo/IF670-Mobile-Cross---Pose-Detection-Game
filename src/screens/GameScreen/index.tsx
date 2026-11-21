@@ -17,6 +17,7 @@ import {
   ActivityIndicator,
   Modal,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { Camera, useCameraDevice } from 'react-native-vision-camera';
 import type { CameraPosition } from 'react-native-vision-camera';
 import { useCameraPermission } from '../../hooks/useCameraPermission';
@@ -33,6 +34,10 @@ import { saveGameSession } from '../../services/firebase/databaseService';
 import { COLORS, GAME_DURATION_SECONDS } from '../../constants';
 import type { GameStatus, GameChallenge, PoseValidationResult, PoseLandmark } from '../../types';
 import PoseOverlay from '../../components/game/PoseOverlay';
+import GetReadyOverlay from '../../components/game/GetReadyOverlay';
+import GameHud from '../../components/game/GameHud';
+import PauseDialog from '../../components/game/PauseDialog';
+import ResultCard from '../../components/game/ResultCard';
 
 // ── Challenges with Clear Indonesian UX Instructions ─────────
 
@@ -115,6 +120,7 @@ const GameScreen: React.FC<GameScreenProps> = ({
   const [lastResult, setLastResult] = useState<PoseValidationResult | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [showSummary, setShowSummary] = useState(false);
+  const [isPaused, setIsPaused] = useState(false);
   const [isSuccessHold, setIsSuccessHold] = useState(false);
   const [finalScore, setFinalScore] = useState(0);
   const [finalPoses, setFinalPoses] = useState(0);
@@ -182,58 +188,7 @@ const GameScreen: React.FC<GameScreenProps> = ({
     detectionRef.current = null;
   }
 
-  // ── Countdown → Start ───────────────────────────────────────
-
-  const startCountdown = useCallback(() => {
-    setGameStatus('COUNTDOWN');
-    setCountdown(3);
-
-    let count = 3;
-    const id = setInterval(() => {
-      count -= 1;
-      setCountdown(count);
-      if (count === 0) {
-        clearInterval(id);
-        startGame();
-      }
-    }, 1000);
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
-
-  // ── Game Loop ───────────────────────────────────────────────
-
-  const startGame = useCallback(() => {
-    // Reset state
-    scoreRef.current = 0;
-    poseCountRef.current = 0;
-    framesRef.current = 0;
-    setScore(0);
-    setPoseCount(0);
-    setTotalFrames(0);
-    setTimeLeft(GAME_DURATION_SECONDS);
-    setLastResult(null);
-    setLandmarks(null);
-    setGameStatus('ACTIVE');
-    isSuccessCooldownRef.current = false;
-    setIsSuccessHold(false);
-    const firstChallenge = getRandomChallenge();
-    currentChallengeRef.current = firstChallenge;
-    setCurrentChallenge(firstChallenge);
-
-    // Countdown timer
-    let remaining = GAME_DURATION_SECONDS;
-    timerRef.current = setInterval(() => {
-      remaining -= 1;
-      setTimeLeft(remaining);
-      if (remaining <= 0) {
-        endGame();
-      }
-    }, 1000);
-
-    // Fast real-time pose tracking loop (every 250ms for near-instant response)
-    detectionRef.current = setInterval(async () => {
-      await captureAndDetect();
-    }, 250);
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  // ── Detection & Game Engine ─────────────────────────────────
 
   const captureAndDetect = useCallback(async () => {
     if (!cameraRef.current || isDetectingRef.current) return;
@@ -316,8 +271,73 @@ const GameScreen: React.FC<GameScreenProps> = ({
       .finally(() => setIsSaving(false));
   }, [userId]);
 
+  // ── Game Loop ───────────────────────────────────────────────
+
+  const startGame = useCallback(() => {
+    // Reset state
+    scoreRef.current = 0;
+    poseCountRef.current = 0;
+    framesRef.current = 0;
+    setScore(0);
+    setPoseCount(0);
+    setTotalFrames(0);
+    setTimeLeft(GAME_DURATION_SECONDS);
+    setLastResult(null);
+    setLandmarks(null);
+    setGameStatus('ACTIVE');
+    isSuccessCooldownRef.current = false;
+    setIsSuccessHold(false);
+    const firstChallenge = getRandomChallenge();
+    currentChallengeRef.current = firstChallenge;
+    setCurrentChallenge(firstChallenge);
+
+    // Countdown timer
+    let remaining = GAME_DURATION_SECONDS;
+    timerRef.current = setInterval(() => {
+      remaining -= 1;
+      setTimeLeft(remaining);
+      if (remaining <= 0) {
+        endGame();
+      }
+    }, 1000);
+
+    // Fast real-time pose tracking loop (every 250ms for near-instant response)
+    detectionRef.current = setInterval(async () => {
+      await captureAndDetect();
+    }, 250);
+  }, [captureAndDetect, endGame]);
+
+  // ── Countdown → Start ───────────────────────────────────────
+
+  const startCountdown = useCallback(() => {
+    setGameStatus('COUNTDOWN');
+    setCountdown(3);
+    setLandmarks(null);
+
+    // Run pose detection during countdown so GetReadyOverlay reflects full body status
+    detectionRef.current = setInterval(async () => {
+      await captureAndDetect();
+    }, 300);
+
+    let count = 3;
+    const id = setInterval(() => {
+      count -= 1;
+      setCountdown(count);
+      if (count === 0) {
+        clearInterval(id);
+        if (detectionRef.current) {
+          clearInterval(detectionRef.current);
+          detectionRef.current = null;
+        }
+        startGame();
+      }
+    }, 1000);
+  }, [captureAndDetect, startGame]);
+
   const restartGame = useCallback(() => {
     setShowSummary(false);
+    setIsPaused(false);
+    clearIntervals();
     setGameStatus('IDLE');
     setTimeLeft(GAME_DURATION_SECONDS);
     setScore(0);
@@ -326,7 +346,47 @@ const GameScreen: React.FC<GameScreenProps> = ({
     setLastResult(null);
     setIsSuccessHold(false);
     isSuccessCooldownRef.current = false;
+    startCountdown();
+  }, [startCountdown]);
+
+  // ── Pause Handlers (Oki PauseDialog integration) ───────────
+
+  const handlePause = useCallback(() => {
+    clearIntervals();
+    setIsPaused(true);
   }, []);
+
+  const handleResume = useCallback(() => {
+    setIsPaused(false);
+    let remaining = timeLeft;
+    timerRef.current = setInterval(() => {
+      remaining -= 1;
+      setTimeLeft(remaining);
+      if (remaining <= 0) {
+        endGame();
+      }
+    }, 1000);
+
+    detectionRef.current = setInterval(async () => {
+      await captureAndDetect();
+    }, 250);
+  }, [timeLeft, endGame, captureAndDetect]);
+
+  const handleRestartFromPause = useCallback(() => {
+    setIsPaused(false);
+    clearIntervals();
+    startCountdown();
+  }, [startCountdown]);
+
+  const handleQuitFromPause = useCallback(() => {
+    setIsPaused(false);
+    clearIntervals();
+    setGameStatus('IDLE');
+    setLandmarks(null);
+    if (onBackToMenu) {
+      onBackToMenu();
+    }
+  }, [onBackToMenu]);
 
   // ── Permission Screen ───────────────────────────────────────
 
@@ -405,44 +465,48 @@ const GameScreen: React.FC<GameScreenProps> = ({
         />
       )}
 
-      {/* ── Top HUD ── */}
-      <View style={styles.hud}>
-        <View style={styles.hudItem}>
-          <Text style={styles.hudLabel}>⏱ Waktu</Text>
-          <Text style={[styles.hudValue, timeLeft <= 10 && styles.hudValueDanger]}>
-            {timeLeft}s
-          </Text>
-        </View>
-        <View style={styles.hudItem}>
-          <Text style={styles.hudLabel}>⭐ Skor</Text>
-          <Text style={styles.hudValue}>{score}</Text>
-        </View>
-        <View style={styles.hudItem}>
-          <Text style={styles.hudLabel}>💪 Pose</Text>
-          <Text style={styles.hudValue}>{poseCount}</Text>
-        </View>
-      </View>
+      {/* ── Top HUD (Oki's GameHud) & Camera Controls ── */}
+      {gameStatus === 'ACTIVE' && (
+        <SafeAreaView edges={['top']} style={styles.hudSafeArea}>
+          <GameHud
+            poseCount={poseCount}
+            secondsLeft={timeLeft}
+            onPause={handlePause}
+          />
+          <View style={styles.cameraControlsBar}>
+            <View style={styles.scorePill}>
+              <Text style={styles.scorePillText}>⭐ {score} pts</Text>
+            </View>
+            <TouchableOpacity style={styles.controlPill} onPress={toggleResizeMode}>
+              <Text style={styles.controlPillText}>
+                {resizeMode === 'contain' ? '📐 Full Body' : '📐 Layar Penuh'}
+              </Text>
+            </TouchableOpacity>
+            {device.minZoom < 1 && (
+              <TouchableOpacity style={styles.controlPill} onPress={toggleZoom}>
+                <Text style={styles.controlPillText}>
+                  🔍 Zoom: {zoom.toFixed(1)}x {zoom <= device.minZoom + 0.05 ? '(Wide)' : ''}
+                </Text>
+              </TouchableOpacity>
+            )}
+            <TouchableOpacity style={styles.controlPill} onPress={toggleCameraPosition}>
+              <Text style={styles.controlPillText}>
+                🔄 {cameraPosition === 'front' ? 'Kamera Belakang' : 'Kamera Depan'}
+              </Text>
+            </TouchableOpacity>
+          </View>
+        </SafeAreaView>
+      )}
 
-      {/* ── Camera Controls Bar (Full Body / Zoom / Flip) ── */}
-      <View style={styles.cameraControlsBar}>
-        <TouchableOpacity style={styles.controlPill} onPress={toggleResizeMode}>
-          <Text style={styles.controlPillText}>
-            {resizeMode === 'contain' ? '📐 Full Body' : '📐 Layar Penuh'}
-          </Text>
-        </TouchableOpacity>
-        {device.minZoom < 1 && (
-          <TouchableOpacity style={styles.controlPill} onPress={toggleZoom}>
-            <Text style={styles.controlPillText}>
-              🔍 Zoom: {zoom.toFixed(1)}x {zoom <= (device.minZoom + 0.05) ? '(Wide)' : ''}
-            </Text>
-          </TouchableOpacity>
-        )}
-        <TouchableOpacity style={styles.controlPill} onPress={toggleCameraPosition}>
-          <Text style={styles.controlPillText}>
-            🔄 {cameraPosition === 'front' ? 'Kamera Belakang' : 'Kamera Depan'}
-          </Text>
-        </TouchableOpacity>
-      </View>
+      {/* ── Pause Dialog (Oki's PauseDialog) ── */}
+      <PauseDialog
+        visible={isPaused}
+        poseCount={poseCount}
+        secondsLeft={timeLeft}
+        onResume={handleResume}
+        onRestart={handleRestartFromPause}
+        onQuit={handleQuitFromPause}
+      />
 
       {/* ── Challenge Card & Live Pose Guidance ── */}
       {gameStatus === 'ACTIVE' && (
@@ -490,12 +554,13 @@ const GameScreen: React.FC<GameScreenProps> = ({
         </View>
       )}
 
-      {/* ── Countdown Overlay ── */}
+      {/* ── Countdown Overlay (Oki's GetReadyOverlay) ── */}
       {gameStatus === 'COUNTDOWN' && (
-        <View style={styles.countdownOverlay}>
-          <Text style={styles.countdownText}>{countdown}</Text>
-          <Text style={styles.countdownSubText}>Bersiap di depan kamera...</Text>
-        </View>
+        <GetReadyOverlay
+          count={countdown}
+          bodyDetected={Boolean(landmarks && landmarks.length >= 10)}
+          durationSeconds={GAME_DURATION_SECONDS}
+        />
       )}
 
       {/* ── Idle Start Screen ── */}
@@ -524,48 +589,23 @@ const GameScreen: React.FC<GameScreenProps> = ({
         </View>
       )}
 
-      {/* ── Game Summary Modal (Instant Popup) ── */}
-      <Modal visible={showSummary} transparent animationType="slide">
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalCard}>
-            <Text style={styles.modalTitle}>🏁 Game Selesai!</Text>
-
-            <View style={styles.statRow}>
-              <Text style={styles.statLabel}>⭐ Skor Akhir</Text>
-              <Text style={styles.statValue}>{finalScore}</Text>
-            </View>
-            <View style={styles.statRow}>
-              <Text style={styles.statLabel}>💪 Pose Berhasil</Text>
-              <Text style={styles.statValue}>{finalPoses}</Text>
-            </View>
-            <View style={styles.statRow}>
-              <Text style={styles.statLabel}>🎯 Akurasi</Text>
-              <Text style={styles.statValue}>{finalAccuracy}%</Text>
-            </View>
-
-            {isSaving ? (
-              <View style={styles.inlineSaving}>
-                <ActivityIndicator size="small" color={COLORS.primary} />
-                <Text style={styles.inlineSavingText}>Menyimpan skor ke cloud...</Text>
-              </View>
-            ) : (
-              <View style={styles.inlineSaving}>
-                <Text style={[styles.inlineSavingText, { color: '#00FF66' }]}>
-                  ☁️ Skor tersinkronisasi ke cloud
-                </Text>
-              </View>
-            )}
-
-            <TouchableOpacity style={styles.primaryButton} onPress={restartGame}>
-              <Text style={styles.primaryButtonText}>Main Lagi</Text>
-            </TouchableOpacity>
-            {onBackToMenu && (
-              <TouchableOpacity style={styles.secondaryButton} onPress={onBackToMenu}>
-                <Text style={styles.secondaryButtonText}>Kembali ke Menu</Text>
-              </TouchableOpacity>
-            )}
-          </View>
-        </View>
+      {/* ── Game Summary Modal (Oki's ResultCard) ── */}
+      <Modal visible={showSummary} animationType="slide">
+        <ResultCard
+          poseCount={finalPoses}
+          posePerMinute={finalPoses / (GAME_DURATION_SECONDS / 60)}
+          streakFrom={1}
+          streakTo={finalPoses > 0 ? 2 : 1}
+          saved={!isSaving}
+          onPlayAgain={restartGame}
+          onContinue={() => {
+            setShowSummary(false);
+            setGameStatus('IDLE');
+            if (onBackToMenu) {
+              onBackToMenu();
+            }
+          }}
+        />
       </Modal>
     </View>
   );
@@ -602,31 +642,40 @@ const styles = StyleSheet.create({
   infoText: { color: COLORS.textSecondary, fontSize: 15, textAlign: 'center', paddingHorizontal: 16 },
   subInfoText: { color: '#AAA', fontSize: 13, textAlign: 'center', marginTop: -6 },
 
-  // HUD
-  hud: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    paddingHorizontal: 16,
-    paddingTop: 48,
-    paddingBottom: 8,
-    backgroundColor: 'rgba(0,0,0,0.65)',
+  // Top HUD & Camera Controls
+  hudSafeArea: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    zIndex: 10,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    paddingBottom: 6,
   },
-  hudItem: { alignItems: 'center' },
-  hudLabel: { color: COLORS.textSecondary, fontSize: 11, fontWeight: '600' },
-  hudValue: { color: COLORS.text, fontSize: 28, fontWeight: 'bold' },
-  hudValueDanger: { color: '#FF4444' },
-
-  // Camera Controls Bar
   cameraControlsBar: {
     flexDirection: 'row',
     justifyContent: 'center',
-    gap: 12,
+    alignItems: 'center',
+    gap: 8,
+    paddingTop: 4,
+    flexWrap: 'wrap',
+  },
+  scorePill: {
+    backgroundColor: 'rgba(255, 215, 0, 0.25)',
+    paddingHorizontal: 12,
     paddingVertical: 6,
-    backgroundColor: 'rgba(0,0,0,0.4)',
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: '#FFD700',
+  },
+  scorePillText: {
+    color: '#FFD700',
+    fontSize: 12,
+    fontWeight: 'bold',
   },
   controlPill: {
     backgroundColor: 'rgba(255,255,255,0.2)',
-    paddingHorizontal: 14,
+    paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 16,
     borderWidth: 1,
@@ -700,20 +749,6 @@ const styles = StyleSheet.create({
   feedbackFail: { color: '#FF7043' },
   feedbackIdle: { color: '#AAA', fontSize: 12, textAlign: 'center', fontStyle: 'italic' },
 
-  // Countdown
-  countdownOverlay: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: 'rgba(0,0,0,0.65)',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  countdownText: { color: '#FFF', fontSize: 120, fontWeight: 'bold' },
-  countdownSubText: { color: COLORS.textSecondary, fontSize: 18, marginTop: 8 },
-
   // Idle Overlay
   idleOverlay: {
     position: 'absolute',
@@ -748,34 +783,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   secondaryButtonText: { color: COLORS.text, fontSize: 16, fontWeight: '600' },
-
-  // Summary Modal
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.8)',
-    alignItems: 'center',
-    justifyContent: 'flex-end',
-  },
-  modalCard: {
-    width: '100%',
-    backgroundColor: COLORS.background,
-    borderTopLeftRadius: 28,
-    borderTopRightRadius: 28,
-    padding: 32,
-    gap: 14,
-  },
-  modalTitle: { color: COLORS.text, fontSize: 26, fontWeight: 'bold', textAlign: 'center' },
-  statRow: { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 4 },
-  statLabel: { color: COLORS.textSecondary, fontSize: 16 },
-  statValue: { color: COLORS.text, fontSize: 20, fontWeight: 'bold' },
-  inlineSaving: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-    paddingVertical: 6,
-  },
-  inlineSavingText: { color: COLORS.textSecondary, fontSize: 13 },
 });
 
 export default GameScreen;
